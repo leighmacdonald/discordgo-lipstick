@@ -89,6 +89,18 @@ type Bot struct {
 	unregister         bool
 }
 
+func (b *Bot) Send(channelID string, payload *discordgo.MessageEmbed) error {
+	if !b.running.Load() || b.session == nil {
+		return nil
+	}
+
+	if _, errSend := b.session.ChannelMessageSendEmbed(channelID, payload); errSend != nil {
+		return errors.Join(errSend, ErrCommandSend)
+	}
+
+	return nil
+}
+
 func (b *Bot) Start(ctx context.Context) error {
 	if b.running.Load() {
 		return nil
@@ -104,6 +116,8 @@ func (b *Bot) Start(ctx context.Context) error {
 }
 
 func (b *Bot) Close() {
+	b.running.Store(false)
+
 	if b.unregister {
 		for _, cmd := range b.registeredCommands {
 			if err := b.session.ApplicationCommandDelete(b.appID, b.guildID, cmd.ID); err != nil {
